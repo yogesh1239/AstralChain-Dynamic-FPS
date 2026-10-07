@@ -1,0 +1,40 @@
+@nsobid-4B159F0F7A360669738390EE8657B4F0
+
+# Astral Chain [01007300020FA000] v1.0.1 - Dynamic-60fps v2 (60 fps cap)
+# Measured time in all modes incl. cutscenes; step 1/16..2; whole-tick counter for 2 frame counters.
+# Design: Claude + Codex (gpt-6.1-sol) review, 2026-10-07. Disable Static mods and the 30fps-cutscenes cheat.
+
+@flag offset_shift 0x100
+@enabled
+009E8D84 21008052 // Init: mov w1,#1
+009DB6BC 21008052 // Runtime: mov w1,#1
+0091DBDC 686278B4 // First sample: cbz x8,0xA0E828
+0091DC10 F0C20314 // Measured sample: b 0xA0E7D0
+0048BE14 08D940B9 // Replace FCVTZS: ldr w8,[x8,#0xD8]
+0057E7DC 08DB40B9 // Load whole ticks: ldr w8,[x24,#0xD8]
+0057E7E0 88010034 // Zero ticks: cbz w8,0x57E810
+00A0E7D0 61DE40BD // ldr s1,[x19,#0xDC]: frames per millisecond
+00A0E7D4 0808211E // fmul s8,s0,s1: measured frame step
+00A0E7D8 B5000034 // cbz w21,0xA0E7EC: preserve override eligibility
+00A0E7DC 656BFA97 // bl 0x8A9570: read override
+00A0E7E0 0820201E // fcmp s0,#0
+00A0E7E4 4D000054 // b.le 0xA0E7EC: ignore nonpositive override
+00A0E7E8 0809201E // fmul s8,s8,s0: apply positive correction
+00A0E7EC 08B0A752 // mov w8,#0x3D800000: float 1/16
+00A0E7F0 0101271E // fmov s1,w8: load floor
+00A0E7F4 0069211E // fmaxnm s0,s8,s1: enforce floor
+00A0E7F8 0110201E // fmov s1,#2: maximum step
+00A0E7FC 0078211E // fminnm s0,s0,s1: enforce maximum
+00A0E800 60D200BD // str s0,[x19,#0xD0]: publish floating step
+00A0E804 61D640BD // ldr s1,[x19,#0xD4]: integer-clock remainder
+00A0E808 2128201E // fadd s1,s1,s0: accumulate fractional ticks
+00A0E80C 2800391E // fcvtzu w8,s1: extract whole ticks
+00A0E810 0201231E // ucvtf s2,w8
+00A0E814 2138221E // fsub s1,s1,s2: retain remainder
+00A0E818 61D600BD // str s1,[x19,#0xD4]: no feedback into D0
+00A0E81C 68DA00B9 // str w8,[x19,#0xD8]: publish whole ticks
+00A0E820 7FE600B9 // str wzr,[x19,#0xE4]: clear unused averaging count
+00A0E824 243DFC17 // b 0x91DCB4: timestamp and normal epilogue
+00A0E828 7FD600B9 // First sample: clear integer remainder
+00A0E82C F0FFFF17 // b 0xA0E7EC: incoming s8 is 1
+@stop
