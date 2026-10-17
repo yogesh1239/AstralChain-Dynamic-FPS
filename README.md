@@ -3,8 +3,26 @@
 > **Experimental.** Tested only on **Astral Chain v1.0.1** (build ID `4B159F0F7A360669`) with
 > the [Eden](https://eden-emu.dev) emulator on Linux, with the **Dynamic-Unlocked** variant and the
 > 1062p resolution patch. Gameplay, menus and cutscenes run at the correct speed in that test.
+> v1.1 was tested on Eden on Linux with Dynamic-Unlocked (without the 1062p patch): move timings,
+> camera and cutscene audio sync were correct. The Dynamic-60fps variant of v1.1 was not tested.
 > It was not tested on a real Switch, on other emulators, or through a full play-through.
 > Please report problems in the [issues](https://github.com/yogesh1239/AstralChain-Dynamic-FPS/issues).
+
+## What's new in v1.1
+
+v1.0 fixed the game speed, but some systems still counted frames. At high frame rates they ran
+too fast. v1.1 fixes three of them ([issue #1](https://github.com/yogesh1239/AstralChain-Dynamic-FPS/issues/1)):
+
+1. **Move and input timing.** Legion summon, recall, Sync Attacks, switches and other moves
+   remember a button press for a number of frames. At 60 FPS that window was half as long, so
+   moves failed. These timers now count whole 30 FPS frames, as in the original game. The same
+   applies to action delays, menu repeat speed and controller rumble length.
+2. **Camera smoothing.** The camera followed the player by a fixed amount per frame, so it
+   felt stiff and shaky at high frame rates. It now uses the real frame time.
+3. **Cutscene audio sync.** At each scene change inside a cutscene, the game dropped a small part
+   of a frame. With v1.0 the picture ran up to about 0.5 seconds ahead of the voices. Cutscene
+   playback now moves in whole 30 FPS steps, so it stays in time. **Side effect:** movement in
+   cutscenes updates 30 times per second and can look less smooth. Gameplay is not affected.
 
 Astral Chain runs at **30 FPS** (frames per second). The known 60 FPS patches tell the game that
 **every frame lasts exactly 1/60 second**. When your PC drops below 60 FPS, the whole game
@@ -33,7 +51,8 @@ This mod removes all three limits. The game keeps using its own measurement. The
 changes two counters that count only whole 30 FPS frames. Without that change, those counters
 stop at high frame rates.
 
-The full technical analysis, with every address, is in [docs/TECHNICAL.md](docs/TECHNICAL.md).
+The full technical analysis of v1.0, with every address, is in [docs/TECHNICAL.md](docs/TECHNICAL.md).
+The v1.1 changes are described by the comments in the patch files.
 
 ## Download
 
@@ -61,6 +80,10 @@ Resolution patches, such as KeatonTheBot's 1062p patch, work together with this 
 - **Below 15 FPS** the game still goes into slow motion. The original game does the same.
 - **Above 480 FPS** the game runs slightly fast. This mod uses 480 FPS as the shortest step, to
   protect game code that divides by the step.
+- **Cutscenes** look like 30 FPS motion (see v1.1 above). A smoother version may follow.
+- **Camera:** some smaller camera timers still count frames. v1.1 does not change them.
+- **Timers not found:** v1.1 changes the frame counters that a code search found. Others may
+  still exist. Please report any move or effect that still feels too fast.
 - **End credits:** one credits counter was not changed. It may run fast above 30 FPS. Not tested.
 - **Real Switch hardware:** not tested. The mod puts new code in empty space at the end of the
   game code. Eden accepts this. Atmosphere was not checked.
