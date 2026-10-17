@@ -5,8 +5,15 @@
 > 1062p resolution patch. Gameplay, menus and cutscenes run at the correct speed in that test.
 > v1.1 was tested on Eden on Linux with Dynamic-Unlocked (without the 1062p patch): move timings,
 > camera and cutscene audio sync were correct. The Dynamic-60fps variant of v1.1 was not tested.
+> v1.1.1 removes the v1.1 cutscene change (see below).
 > It was not tested on a real Switch, on other emulators, or through a full play-through.
 > Please report problems in the [issues](https://github.com/yogesh1239/AstralChain-Dynamic-FPS/issues).
+
+## What's new in v1.1.1
+
+v1.1.1 removes fix 3 (cutscene audio sync) from v1.1. Its 30 FPS cutscene steps made characters
+look smeared in in-engine cutscenes. Cutscene motion is smooth again. The v1.0 audio drift in
+some cutscenes (picture slightly ahead of the voices) comes back. Fixes 1 and 2 are unchanged.
 
 ## What's new in v1.1
 
@@ -80,7 +87,7 @@ Resolution patches, such as KeatonTheBot's 1062p patch, work together with this 
 - **Below 15 FPS** the game still goes into slow motion. The original game does the same.
 - **Above 480 FPS** the game runs slightly fast. This mod uses 480 FPS as the shortest step, to
   protect game code that divides by the step.
-- **Cutscenes** look like 30 FPS motion (see v1.1 above). A smoother version may follow.
+- **Cutscene audio:** in some cutscenes the picture runs up to about 0.5 seconds ahead of the voices.
 - **Camera:** some smaller camera timers still count frames. v1.1 does not change them.
 - **Timers not found:** v1.1 changes the frame counters that a code search found. Others may
   still exist. Please report any move or effect that still feels too fast.

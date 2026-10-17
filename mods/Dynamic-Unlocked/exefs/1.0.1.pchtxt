@@ -1,15 +1,13 @@
 @nsobid-4B159F0F7A360669738390EE8657B4F0
 
-# Astral Chain [01007300020FA000] v1.0.1 - Dynamic-Unlocked v1.1 (no cap)
-# v1.0 + three fixes for high frame rates:
+# Astral Chain [01007300020FA000] v1.0.1 - Dynamic-Unlocked v1.1.1 (no cap)
+# v1.0 + two fixes for high frame rates:
 #  - Action and input timers (move input windows, double-tap windows, action delays) count whole 30 FPS frames.
 #  - Camera smoothing uses the frame time instead of a fixed fraction per frame.
-#  - Cutscene playback advances in whole 30 FPS steps, so the picture stays in time with the voices.
-#    Cutscene motion therefore updates 30 times per second.
 # Disable the Static mods and the "Cutscenes Speed Fix For 60 FPS Patch" cheat.
 
 @flag offset_shift 0x100
-# Dynamic FPS v1.1 - Dynamic-Unlocked
+# Dynamic FPS v1.1.1 - Dynamic-Unlocked
 @enabled
 009E8D84 01008052 // Init: mov w1,#0
 009DB6BC 01008052 // Runtime: mov w1,#0
@@ -680,24 +678,4 @@
 009307A0 E21340F9 // ldr x2,[sp,0x20]
 009307A4 FD7BC3A8 // ldp x29,x30,[sp],0x30
 009307A8 C0035FD6 // ret
-008C2490 E16D0194 // Cutscene whole ticks: bl 0x91DC14 (was bl 0x430DA0)
-0091DC14 FD7BBFA9 // stp x29,x30,[sp,#-16]!
-0091DC18 FD030091 // mov x29,sp
-0091DC1C 614CEC97 // bl 0x430DA0: s0 = original step
-0091DC20 D02400F0 // adrp x16,0xDB8000
-0091DC24 10CE41F9 // ldr x16,[x16,#0x398]: GOT -> flags 0xDCBA30
-0091DC28 100240B9 // ldr w16,[x16]
-0091DC2C 7001F036 // tbz w16,#30,done: only cutscene fixed-step mode
-0091DC30 D02400F0 // adrp x16,0xDB8000
-0091DC34 10D244F9 // ldr x16,[x16,#0x9A0]: timer object
-0091DC38 100100B4 // cbz x16,done
-0091DC3C 01D240BD // ldr s1,[x16,#0xD0]: v2 step
-0091DC40 2820201E // fcmp s1,#0
-0091DC44 AD000054 // b.le done: pause/NaN keeps s0
-0091DC48 11DA40B9 // ldr w17,[x16,#0xD8]: whole ticks
-0091DC4C 2202231E // ucvtf s2,w17
-0091DC50 0018211E // fdiv s0,s0,s1
-0091DC54 0008221E // fmul s0,s0,s2: s0 = s0*T/D0
-0091DC58 FD7BC1A8 // done: ldp x29,x30,[sp],#16
-0091DC5C C0035FD6 // ret
 @stop
