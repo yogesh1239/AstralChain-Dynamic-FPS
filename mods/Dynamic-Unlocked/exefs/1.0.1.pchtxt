@@ -1,9 +1,10 @@
 @nsobid-4B159F0F7A360669738390EE8657B4F0
 
 # Astral Chain [01007300020FA000] v1.0.1 - Dynamic-Unlocked v1.1.1 (no cap)
-# v1.0 + two fixes for high frame rates:
+# v1.0 + three fixes for high frame rates:
 #  - Action and input timers (move input windows, double-tap windows, action delays) count whole 30 FPS frames.
 #  - Camera smoothing uses the frame time instead of a fixed fraction per frame.
+#  - Stick gestures, the assault attack (back-to-forward) and the spin attack (360 spin), count whole 30 FPS frames and sample the stick 30 times a second.
 # Disable the Static mods and the "Cutscenes Speed Fix For 60 FPS Patch" cheat.
 
 @flag offset_shift 0x100
@@ -678,4 +679,47 @@
 009307A0 E21340F9 // ldr x2,[sp,0x20]
 009307A4 FD7BC3A8 // ldp x29,x30,[sp],0x30
 009307A8 C0035FD6 // ret
+# r6 stick gestures, the assault attack (back-to-forward) and the spin attack (360 spin): the gesture parser 0x322BE0 and the player input
+# update 0x282870 count their windows in whole 30 FPS ticks (hs_w8 / hs_w9 above), and the direction sector stamp
+# 0x322D6C runs only on frames with a whole tick, so a stick sweep is sampled 30 times a second as at 30 FPS and
+# does not read as a rotation. The two caves fill the last free words of the code cave (0xA0EFD4..0xA0EFFF).
+00322BF8 62B01B94 // stick [hs] +0x1508 sector timer: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322C10 5CB01B94 // stick [hs] +0x150C sector timer (sub after a > 0 test): bl hs_w8 0xa0ed80 (was sub w8, w8, #1)
+00322C1C 59B01B94 // stick [hs] +0x1510 sector timer: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322C2C 55B01B94 // stick [hs] +0x1514 sector timer: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322C3C 51B01B94 // stick [hs] +0x1518 sector timer: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322C4C 4DB01B94 // stick [hs] +0x151C sector timer: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322C5C 49B01B94 // stick [hs] +0x1520 sector timer: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322C6C 45B01B94 // stick [hs] +0x1524 sector timer: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322D74 03B01B94 // stick [hs] +0x1528 rotation window, spin attack (360 spin): bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322E04 DFAF1B94 // stick [hs] +0x153C same-direction window, after a rotation: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322E3C D1AF1B94 // stick [hs] +0x153C same-direction window: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322E4C CDAF1B94 // stick [hs] +0x1538 reversal (back-to-forward) window: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322E5C C9AF1B94 // stick [hs] +0x1544 push window: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322E6C C5AF1B94 // stick [hs] +0x1548 window: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322E7C C1AF1B94 // stick [hs] +0x156C right-stick window: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322E8C BDAF1B94 // stick [hs] +0x155C push window: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322FB0 74AF1B94 // stick [hs] +0x46B438 window: bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00322FC8 6EAF1B94 // stick [hs] +0x1530 press window (sub after a > 0 test): bl hs_w8 0xa0ed80 (was sub w8, w8, #1)
+00322F0C 9DAF1B94 // stick [hs] +0x1568 right-stick push window: bl hs_w8 0xa0ed80 (was subs w9, w8, #1)
+00322F24 97AF1B94 // stick [hs] +0x1568, other path: bl hs_w8 0xa0ed80 (was subs w9, w8, #1)
+00322F30 E903082A // stick +0x1568 store path: mov w9, w8 (was mov w8, w9): the store takes the scaled w8
+00282A48 CE301E94 // input [hs] +0x46AE80 left-stick push window (3 frames): bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00282A64 C7301E94 // input [hs] +0x46AE84 right-stick push window (3 frames): bl hs_w8 0xa0ed80 (was subs w8, w8, #1)
+00282FD0 7B2F1E94 // input [hs] +0x46B570 window: bl hs_w9 0xa0edbc (was subs w9, w9, #1)
+00282FEC 742F1E94 // input [hs] +0x46B590 window: bl hs_w9 0xa0edbc (was subs w9, w9, #1)
+002832E4 B62E1E94 // input [hs] +0x46AE5C press-repeat window (5 frames): bl hs_w9 0xa0edbc (was subs w9, w9, #1)
+00322D6C 9AB01B14 // stick sector stamp: b cave 0xa0efd4 (was str w9, [x8, #0x1508])
+002833A0 132F1E14 // input countdown +0x46ADB4: b cave 0xa0efec (was fmov s1, #-1.0)
+00A0EFD4 4A1D00D0 // stick cave_322d6c: adrp x10, #0xdb8000
+00A0EFD8 4AD144F9 // stick cave_322d6c: ldr x10, [x10, #0x9a0]: timer object
+00A0EFDC 4AD940B9 // stick cave_322d6c: ldr w10, [x10, #0xd8]: whole ticks
+00A0EFE0 4A000034 // stick cave_322d6c: cbz w10, +8: no tick, no stamp
+00A0EFE4 090915B9 // stick cave_322d6c: str w9, [x8, #0x1508]: stamp the sector (12 frames)
+00A0EFE8 624FE417 // stick cave_322d6c: b #0x322d70
+00A0EFEC 491D00D0 // input cave_2833a0: adrp x9, #0xdb8000
+00A0EFF0 29D144F9 // input cave_2833a0: ldr x9, [x9, #0x9a0]: timer object
+00A0EFF4 21D140BD // input cave_2833a0: ldr s1, [x9, #0xd0]: step
+00A0EFF8 2140211E // input cave_2833a0: fneg s1, s1: count down by the step
+00A0EFFC EAD0E117 // input cave_2833a0: b #0x2833a4
 @stop
