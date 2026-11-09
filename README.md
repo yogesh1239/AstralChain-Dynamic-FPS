@@ -9,6 +9,26 @@
 > It was not tested on a real Switch, on other emulators, or through a full play-through.
 > Please report problems in the [issues](https://github.com/yogesh1239/AstralChain-Dynamic-FPS/issues).
 
+## Stick gestures (next version)
+
+Some moves read a stick motion: the **assault attack** (back-to-forward) and the **spin attack**
+(360 spin). The game reads them with frame counters, which v1.1.1 left unchanged. At 60 FPS,
+back-to-forward could not be done on a controller, and the window for the spin attack (360 spin)
+was half as long.
+
+1. **Gesture windows.** A stick push opens a window of 5 frames. A second push inside that window, in
+   the opposite direction, is a back-to-forward input. At 60 FPS that window lasted 83 ms. A stick
+   needs more time than that to cross the centre, so only a keyboard could do the move. The gesture
+   windows now count whole 30 FPS frames, like the other input timers of v1.1.
+2. **Stick sampling.** The game also checks which of 8 directions the stick points to in each frame.
+   6 directions in a short time count as a spin, and a spin cancels the back-to-forward input. At
+   60 FPS the game sees twice as many directions during a back-to-forward motion, so it took the
+   motion for a spin more often. The directions are now recorded only on frames that complete a
+   30 FPS frame: 30 times a second, as in the original game.
+
+Tested in Eden: spin attacks (360 spin) and assault attacks (back-to-forward) work well with a
+controller at 60 FPS.
+
 ## What's new in v1.1.1
 
 v1.1.1 removes fix 3 (cutscene audio sync) from v1.1. Its 30 FPS cutscene steps made characters
@@ -91,6 +111,8 @@ Resolution patches, such as KeatonTheBot's 1062p patch, work together with this 
 - **Camera:** some smaller camera timers still count frames. v1.1 does not change them.
 - **Timers not found:** v1.1 changes the frame counters that a code search found. Others may
   still exist. Please report any move or effect that still feels too fast.
+- **Code cave full:** the stick gesture fix uses the last free space of the code cave
+  (`0xA0EFD4..0xA0EFFF`). A further fix needs new space; see [docs/TECHNICAL.md](docs/TECHNICAL.md).
 - **End credits:** one credits counter was not changed. It may run fast above 30 FPS. Not tested.
 - **Real Switch hardware:** not tested. The mod puts new code in empty space at the end of the
   game code. Eden accepts this. Atmosphere was not checked.
@@ -106,6 +128,7 @@ Resolution patches, such as KeatonTheBot's 1062p patch, work together with this 
   helped to find the frame cap that the game uses at run time.
 - Analysis and patch design: **Claude** (Anthropic) and **Codex / gpt-6.1-sol** (OpenAI), as
   author and reviewer. Testing: **yogesh1239**.
+- Stick gesture fix: **capibawa**. Analysis: **Claude** (Anthropic).
 
 ## License
 

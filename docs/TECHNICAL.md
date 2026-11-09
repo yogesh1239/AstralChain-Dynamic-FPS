@@ -79,6 +79,88 @@ Design notes:
 - The staff-roll scheduler (`0x6A3F28`, counter `0xA282930`) counts integer frames. It was not
   changed. A fix exists (hook `0x6A23D0`/`0x6A1180`) if testing shows the credits run fast.
 
+## Stick gestures (r6)
+
+### Gesture parser (original game)
+
+Function `0x322BE0`, called once per frame by the player input update `0x282870` (call at
+`0x283030`), with `x19` = the player input object. The stick's squared length is `[+0x940]`, its
+angle `[+0x948]` (sector test), and `[+0x94C]` is the direction the push angles are taken from. A push is a stick length above `640000`
+(`[0xB5CEC4]`).
+
+| Field | Set to | Meaning |
+|---|---|---|
+| `+0x1508..+0x1524` | 12 | one timer per direction sector (8 sectors), stamped at `0x322D6C` while the stick points there |
+| `+0x1528` | 5 | rotation window for the spin attack (360 spin): 6 or more live sectors (`0x322DE8`) |
+| `+0x1530` | 5 / 10 | press window: 5 after a first push, 10 after a second push inside it |
+| `+0x1534` | angle | angle of the last push |
+| `+0x1538` | 5 | **reversal**: a push inside the press window that turns more than 135° (`2.356`, `0x323010`) |
+| `+0x153C` | 5 | same-direction push: a push inside the window that turns less than 45° (`0.785`, `0x322FF4`) |
+| `+0x1544`, `+0x155C` | 5 | push windows |
+| `+0x1554` | 1 | pushed this frame (also when a held stick turns more than 135°, `0x322EF8`) |
+| `+0x1568`, `+0x156C` | 5 | right-stick push windows |
+
+All windows are decremented by 1 per frame. A rotation clears `+0x1538` and `+0x153C`
+(`str xzr,[x19,#0x1538]` at `0x322DFC`). The attack selector reads the flags when the attack button
+is pressed: `0x2867C0` picks attack `0x41` while `+0x1538 > 0` and attack `0x43` while
+`+0x1528 > 0`, so an open rotation window wins. Other readers of `+0x1538`: `0x2861C4`, `0x287010`,
+`0x325748`.
+
+Two problems at 60 FPS:
+1. **Window length.** The press window lasted 83 ms instead of 167 ms. A controller stick needs
+   more time than that to go from back through the centre to forward, so the reversal was never
+   set. A key changes direction at once, so a keyboard still worked.
+2. **Sampling.** A back-to-forward sweep along the edge of the stick passes about 5 sectors. At
+   30 FPS a fast sweep is sampled about every 33 ms and skips some of them. At 60 FPS more sectors
+   are stamped, the rotation test reaches 6 more often, and the rotation clears the reversal and
+   takes over the attack. Scaling the windows alone left the assault attack (back-to-forward)
+   window tighter than at 30 FPS in play.
+
+### Changes
+
+| Address | Original | New | Purpose |
+|---|---|---|---|
+| `0x322BF8`, `0x322C1C..0x322C6C` (6) | `subs w8,w8,#1` | `bl hs_w8` | sector timers |
+| `0x322C10` | `sub w8,w8,#1` | `bl hs_w8` | sector timer `+0x150C` |
+| `0x322D74` | `subs w8,w8,#1` | `bl hs_w8` | rotation window |
+| `0x322E04`, `0x322E3C` | `subs w8,w8,#1` | `bl hs_w8` | same-direction window |
+| `0x322E4C` | `subs w8,w8,#1` | `bl hs_w8` | reversal window |
+| `0x322E5C..0x322E8C` (4) | `subs w8,w8,#1` | `bl hs_w8` | push and right-stick windows |
+| `0x322F0C`, `0x322F24` | `subs w9,w8,#1` | `bl hs_w8` | right-stick push window `+0x1568` |
+| `0x322F30` | `mov w8,w9` | `mov w9,w8` | its store takes the scaled `w8` |
+| `0x322FB0` | `subs w8,w8,#1` | `bl hs_w8` | window `+0x46B438` |
+| `0x322FC8` | `sub w8,w8,#1` | `bl hs_w8` | press window `+0x1530` |
+| `0x322D6C` | `str w9,[x8,#0x1508]` | `b 0xA0EFD4` | sector stamp only with a whole tick |
+| `0x282A48`, `0x282A64` | `subs w8,w8,#1` | `bl hs_w8` | stick push windows `+0x46AE80`, `+0x46AE84` (3 frames) |
+| `0x282FD0`, `0x282FEC` | `subs w9,w9,#1` | `bl hs_w9` | windows `+0x46B570`, `+0x46B590` |
+| `0x2832E4` | `subs w9,w9,#1` | `bl hs_w9` | press-repeat window `+0x46AE5C` (5 frames) |
+| `0x2833A0` | `fmov s1,#-1.0` | `b 0xA0EFEC` | countdown `+0x46ADB4`: subtract the step |
+
+Code cave, the last 11 free words:
+
+```
+0xA0EFD4  adrp x10,0xDB8000 ; ldr x10,[x10,#0x9A0] ; ldr w10,[x10,#0xD8]   ; whole ticks
+          cbz w10,+8 ; str w9,[x8,#0x1508] ; b 0x322D70                   ; stamp only with a tick
+0xA0EFEC  adrp x9,0xDB8000 ; ldr x9,[x9,#0x9A0] ; ldr s1,[x9,#0xD0]       ; step
+          fneg s1,s1 ; b 0x2833A4                                          ; count down by the step
+```
+
+Notes:
+- `hs_w8` / `hs_w9` (`0xA0ED80`, `0xA0EDBC`) are the scaled decrement of v1.1: subtract the whole
+  ticks, stop at 0 from a positive value, and set the flags the original `subs` gave for "expired",
+  "reaches 0 now" and "still running". Both functions save the link register in their prologue,
+  so `bl` is safe at every site, as at the v1.1 sites in `0x282870`.
+- The two `sub` sites run only after a `> 0` test, so `hs_w8` gives the same result. The flags it
+  sets are rewritten before any read.
+- `subs w9,w8,#1` has no shared routine. Both sites scale `w8` with `hs_w8`; the shared store path
+  at `0x322F30` then copies `w8` to `w9`. On the other path `w8` holds the same "expired" value
+  (`<= 0`) that the original left in `w8`, and the next reader (`cmp w8,#1` at `0x322F70`) branches
+  the same way.
+- Scratch registers: `x10` at `0x322D6C` is rewritten at `0x322D80` before any read. `x9` at
+  `0x2833A0` is dead: the path goes on to a call (`bl 0x323140`) without reading it.
+- The code cave is now full. A further cave needs new space, for example the relocated regions at
+  `0x5763E4` and `0x93073C` that v1.1 already uses.
+
 ## Method
 
 1. Decrypted the update NCA with hactool, using the title key from the ticket. Built a flat
